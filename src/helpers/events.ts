@@ -1,12 +1,14 @@
 import { ethers } from 'ethers'
 
-export const compareAbiEvents = async(spinner: any, toolbox: any, dataSource: any, newAbiJson: any): Promise<boolean> => {
+export const compareAbiEvents = async (spinner: any, toolbox: any, dataSource: any, newAbiJson: any): Promise<boolean> => {
   // Convert to Interface
   const newAbi = new ethers.Interface(newAbiJson)
   // Get events signatures
   const newAbiEvents: string[] = [];
   newAbi.forEachEvent((event: ethers.EventFragment) => {
-      event.name && newAbiEvents.push(event.name)
+    const evJSO = JSON.parse(event.format('json'))
+    const evString = `${evJSO.name}(${evJSO.inputs.map(({ type, indexed }: any) => `${indexed ? 'indexed ' : ''}${type}`).join(",")})`
+    evString && newAbiEvents.push(evString);
   })
   // Fetch current dataSource events signatures from subgraph.yaml
   const currentAbiEvents = dataSource.mapping.eventHandlers.map((handler: { event: string }) => { return handler.event })
@@ -16,7 +18,7 @@ export const compareAbiEvents = async(spinner: any, toolbox: any, dataSource: an
 
   const changed = newAbiEvents.length != currentAbiEvents.length || changedEvents.length != 0
 
-  if(changed) {
+  if (changed) {
     spinner.warn(
       `Contract events have been changed!\n
       Current events:\n${currentAbiEvents.join('\n')}\n
